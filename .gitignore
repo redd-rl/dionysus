@@ -1,0 +1,6 @@
+distance_to_boost
+__pycache__
+collision_meshes
+data
+wandb
+renderer

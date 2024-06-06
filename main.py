@@ -23,10 +23,12 @@ class ExampleLogger(MetricsLogger):
             p0_linear_velocity = metric_array[0]
             avg_linvel += p0_linear_velocity
         avg_linvel /= len(collected_metrics)
+        num_days_played = cumulative_timesteps / (120/8) /60 /60 / 24
         report = {"x_vel":avg_linvel[0],
                   "y_vel":avg_linvel[1],
                   "z_vel":avg_linvel[2],
-                  "Cumulative Timesteps":cumulative_timesteps}
+                  "Cumulative Timesteps":cumulative_timesteps,
+                  "Days":num_days_played}
         wandb_run.log(report)
 
 def get_most_recent_checkpoint() -> str:
@@ -42,14 +44,14 @@ def build_rocketsim_env(): # build our environment
     import rlgym_sim
     from rlgym_sim.utils.reward_functions import CombinedReward
     from rlgym_sim.utils.reward_functions.common_rewards import VelocityPlayerToBallReward, VelocityBallToGoalReward, \
-        EventReward, FaceBallReward, TouchBallReward, VelocityReward #add rewards here if you'd like to import more from the default selection.
+        EventReward, TouchBallReward, VelocityReward #add rewards here if you'd like to import more from the default selection.
     from rlgym_sim.utils.obs_builders import DefaultObs
     from rlgym_sim.utils.terminal_conditions.common_conditions import NoTouchTimeoutCondition, GoalScoredCondition
     from rlgym_sim.utils import common_values
     from rlgym_sim.utils.state_setters.random_state import RandomState
     from necto_act import NectoAction # I use Necto Action Parser because it's got 90 actions to pick from. Smaller action space means your bot can start to focus on movement and stuff faster.
                                       # Even though your bot doesn't know what focus is.
-
+    from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce
     spawn_opponents = True # Whether you want opponents or not, set to False if you're practicing hyperspecific scenarios. The opponent is your own bot, so it plays against itself. Used to be called self_play in the old days.
     team_size = 1 # How many bots per team.
     game_tick_rate = 120
@@ -60,24 +62,16 @@ def build_rocketsim_env(): # build our environment
     action_parser = NectoAction()
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
-    rewards_to_combine = (VelocityPlayerToBallReward(),
-                          VelocityBallToGoalReward(),
-                          EventReward(team_goal=5, concede=-15, demo=0.1, touch=1),
-                          FaceBallReward(),
-                          TouchBallReward(aerial_weight=2.2),
-                          VelocityReward()
-                          )
-    reward_weights = (0.09, # VelocityPlayerToBall
-                      0.2, # VelocityBallToGoal
-                      10.0, # EventReward
-                      0.05, # FaceBallReward
-                      0.3, # TouchBallReward
-                      0.001 # VelocityReward
-                      ) # MUST BE THE SAME LENGTH AS THE REWARD LIST, IF YOU HAVE 4 REWARDS YOU MUST HAVE 4 WEIGHT VALUES.
-                                             # Weights decide how important one reward is over the others.
-
-    reward_fn = CombinedReward(reward_functions=rewards_to_combine,
-                               reward_weights=reward_weights)
+    reward_fn = CombinedReward.from_zipped(
+                        (SpeedTowardBallReward(), 0.09), 
+                          (VelocityBallToGoalReward(), 0.5),
+                          (EventReward(
+                              team_goal=5, 
+                              concede=-4, 
+                              demo=0.1), 10.0),
+                          (TouchBallRewardScaledByHitForce(), 0.3),
+                          (VelocityReward(), 0.001)
+    )
 
     obs_builder = DefaultObs(
         pos_coef=np.asarray([1 / common_values.SIDE_WALL_X, 1 / common_values.BACK_NET_Y, 1 / common_values.CEILING_Z]),

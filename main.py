@@ -28,7 +28,8 @@ class ExampleLogger(MetricsLogger):
                   "y_vel":avg_linvel[1],
                   "z_vel":avg_linvel[2],
                   "Cumulative Timesteps":cumulative_timesteps,
-                  "Days":num_days_played}
+                  "Days":num_days_played,
+                  "Years played":num_days_played/365}
         wandb_run.log(report)
 
 def get_most_recent_checkpoint() -> str:
@@ -43,15 +44,17 @@ def get_most_recent_checkpoint() -> str:
 def build_rocketsim_env(): # build our environment
     import rlgym_sim
     from rlgym_sim.utils.reward_functions import CombinedReward
-    from rlgym_sim.utils.reward_functions.common_rewards import VelocityPlayerToBallReward, VelocityBallToGoalReward, \
-        EventReward, TouchBallReward, VelocityReward #add rewards here if you'd like to import more from the default selection.
+    from rlgym_sim.utils.reward_functions.common_rewards import VelocityBallToGoalReward, \
+        EventReward #add rewards here if you'd like to import more from the default selection.
     from rlgym_sim.utils.obs_builders import DefaultObs
     from rlgym_sim.utils.terminal_conditions.common_conditions import NoTouchTimeoutCondition, GoalScoredCondition
     from rlgym_sim.utils import common_values
     from rlgym_sim.utils.state_setters.random_state import RandomState
+    from rlgym_sim.utils.state_setters.default_state import DefaultState
     from necto_act import NectoAction # I use Necto Action Parser because it's got 90 actions to pick from. Smaller action space means your bot can start to focus on movement and stuff faster.
                                       # Even though your bot doesn't know what focus is.
-    from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce
+    from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce, SpeedKickoffReward, AerialDistanceReward, PlayerOnWallReward
+    from custom_state_setters import WeightedSampleSetter, WallPracticeState
     spawn_opponents = True # Whether you want opponents or not, set to False if you're practicing hyperspecific scenarios. The opponent is your own bot, so it plays against itself. Used to be called self_play in the old days.
     team_size = 1 # How many bots per team.
     game_tick_rate = 120
@@ -63,14 +66,16 @@ def build_rocketsim_env(): # build our environment
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
     reward_fn = CombinedReward.from_zipped(
-                        (SpeedTowardBallReward(), 0.09), 
-                          (VelocityBallToGoalReward(), 0.5),
+                        (SpeedTowardBallReward(), 0.1), 
+                          (VelocityBallToGoalReward(), 0.6),
                           (EventReward(
                               team_goal=5, 
                               concede=-4, 
-                              demo=0.1), 10.0),
-                          (TouchBallRewardScaledByHitForce(), 0.3),
-                          (VelocityReward(), 0.001)
+                              demo=5), 10.0),
+                          (TouchBallRewardScaledByHitForce(), 0.4),
+                          (SpeedKickoffReward(), 2),
+                          (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
+                          (PlayerOnWallReward(), 0.05),
     )
 
     obs_builder = DefaultObs(
@@ -79,7 +84,12 @@ def build_rocketsim_env(): # build our environment
         lin_vel_coef=1 / common_values.CAR_MAX_SPEED,
         ang_vel_coef=1 / common_values.CAR_MAX_ANG_VEL)
     
-    state_setter = RandomState(True, True, False) # Pre-set according to the guide, ordered in random ball velocity, random car velocity and whether the cars will be on the ground.
+    state_setter = WeightedSampleSetter.from_zipped(
+        (RandomState(True, True, False), 0.5),
+        (DefaultState(), 0.5),
+        (WallPracticeState(), 0.2),
+    ) 
+    # Pre-set according to the guide, ordered in random ball velocity, random car velocity and whether the cars will be on the ground.
 
     env = rlgym_sim.make(tick_skip=tick_skip,
                          team_size=team_size,
@@ -98,7 +108,7 @@ if __name__ == "__main__":
     from rlgym_ppo import Learner
     metrics_logger = ExampleLogger()
 
-    n_proc = 24
+    n_proc = 34
     print(f"Initializing {n_proc} instances.")
     # educated guess - could be slightly higher or lower
     min_inference_size = max(1, int(round(n_proc * 0.9)))

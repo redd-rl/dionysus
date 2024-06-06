@@ -1,6 +1,6 @@
 from rlgym_sim.utils import RewardFunction
 from rlgym_sim.utils.state_setters import StateSetter
-from rlgym_sim.utils.state_setters import StateWrapper
+from rlgym_sim.utils.state_setters import StateWrapper, DefaultState
 from random import choices
 from typing import Sequence, Union, Tuple
 from rlgym_sim.utils.math import rand_vec3
@@ -258,3 +258,22 @@ class WallPracticeState(StateSetter):
 
             car.set_pos(random.randrange(2944) - 1472, (-4500 + random.randrange(500) - 250) * defense_inverter, 0)
             car.set_rot(0, (random.randrange(360) - 180) * DEG_TO_RAD, 0)
+
+
+
+class TeamSizeSetter(StateSetter):
+    def __init__(self):
+        super().__init__()
+        self.default = DefaultState()
+        self.count = 4
+
+    def build_wrapper(self, max_team_size: int, spawn_opponents: bool) -> StateWrapper:
+        wrapper = StateWrapper(blue_count=self.count, orange_count=self.count if spawn_opponents else 0)
+        self.count = random.choice((1,2,3,4))
+        if self.count == 0:
+            self.count = 4
+
+        return wrapper
+
+    def reset(self, state_wrapper: StateWrapper):
+        self.default.reset(state_wrapper)

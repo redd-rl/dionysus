@@ -66,16 +66,16 @@ def build_rocketsim_env(): # build our environment
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
     reward_fn = CombinedReward.from_zipped(
-                        (SpeedTowardBallReward(), 0.1), 
-                          (VelocityBallToGoalReward(), 0.6),
+                        (SpeedTowardBallReward(), 0.3), 
+                          (VelocityBallToGoalReward(), 0.8),
                           (EventReward(
-                              team_goal=5, 
+                              team_goal=8, 
                               concede=-4, 
                               demo=5), 10.0),
-                          (TouchBallRewardScaledByHitForce(), 0.4),
+                          (TouchBallRewardScaledByHitForce(), 0.7),
                           (SpeedKickoffReward(), 2),
                           (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
-                          (PlayerOnWallReward(), 0.05),
+                          (PlayerOnWallReward(), 0.08),
     )
 
     obs_builder = DefaultObs(
@@ -122,11 +122,13 @@ if __name__ == "__main__":
                       ppo_batch_size=50_000, # Make this the same value as ts_per_iteration.
                       ts_per_iteration=50_000, 
                       exp_buffer_size=150_000,
-                      policy_lr=3e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
-                      critic_lr=3e-4, # 7e-4 for a brand new bot, 
+                      policy_lr=2e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
+                      critic_lr=2e-4, # 7e-4 for a brand new bot, 
                                       # 3e-4 when your bot starts chasing the ball and hitting it, 
                                       # 2e-4 when it starts trying to score
                                       # 1e-4 for advanced outplay mechs.
+                      # policy_layer_sizes=(2048, 1024, 1024, 512), future plans
+                      # critic_layer_sizes=(2048, 1024, 1024, 512), future plans
                       ppo_minibatch_size=50_000,
                       ppo_ent_coef=0.001, # golden value is near 0.01.
                       ppo_epochs=1,
@@ -134,7 +136,7 @@ if __name__ == "__main__":
                       standardize_returns=True,
                       standardize_obs=False,
                       save_every_ts=100_000,
-                      timestep_limit=1_000_000_000, # how many timesteps until it's supposed to stop learning, currently 1 billion by default.
+                      timestep_limit=1e69, # how many timesteps until it's supposed to stop learning, currently 1 billion by default.
                       log_to_wandb=True, # True if you want to log to Weights And Biases, keep False otherwise.
                       wandb_run_name="Dionysus-X", # Name of your Weights And Biases run.
                       wandb_project_name="Dionysus", # Name of your Weights And Biases project.

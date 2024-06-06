@@ -42,7 +42,7 @@ def build_rocketsim_env(): # build our environment
     import rlgym_sim
     from rlgym_sim.utils.reward_functions import CombinedReward
     from rlgym_sim.utils.reward_functions.common_rewards import VelocityPlayerToBallReward, VelocityBallToGoalReward, \
-        EventReward, FaceBallReward #add rewards here if you'd like to import more from the default selection.
+        EventReward, FaceBallReward, TouchBallReward, VelocityReward #add rewards here if you'd like to import more from the default selection.
     from rlgym_sim.utils.obs_builders import DefaultObs
     from rlgym_sim.utils.terminal_conditions.common_conditions import NoTouchTimeoutCondition, GoalScoredCondition
     from rlgym_sim.utils import common_values
@@ -54,7 +54,7 @@ def build_rocketsim_env(): # build our environment
     team_size = 1 # How many bots per team.
     game_tick_rate = 120
     tick_skip = 8 # How long we hold an action before taking a new action, in ticks.
-    timeout_seconds = 10
+    timeout_seconds = 15
     timeout_ticks = int(round(timeout_seconds * game_tick_rate / tick_skip))
 
     action_parser = NectoAction()
@@ -62,9 +62,18 @@ def build_rocketsim_env(): # build our environment
 
     rewards_to_combine = (VelocityPlayerToBallReward(),
                           VelocityBallToGoalReward(),
-                          EventReward(team_goal=5, concede=-5, demo=0.1, touch=1),
-                          FaceBallReward())
-    reward_weights = (0.09, 0.2, 10.0, 0.05) # MUST BE THE SAME LENGTH AS THE REWARD LIST, IF YOU HAVE 4 REWARDS YOU MUST HAVE 4 WEIGHT VALUES.
+                          EventReward(team_goal=5, concede=-15, demo=0.1, touch=1),
+                          FaceBallReward(),
+                          TouchBallReward(aerial_weight=2.2),
+                          VelocityReward()
+                          )
+    reward_weights = (0.09, # VelocityPlayerToBall
+                      0.2, # VelocityBallToGoal
+                      10.0, # EventReward
+                      0.05, # FaceBallReward
+                      0.3, # TouchBallReward
+                      0.001 # VelocityReward
+                      ) # MUST BE THE SAME LENGTH AS THE REWARD LIST, IF YOU HAVE 4 REWARDS YOU MUST HAVE 4 WEIGHT VALUES.
                                              # Weights decide how important one reward is over the others.
 
     reward_fn = CombinedReward(reward_functions=rewards_to_combine,
@@ -109,15 +118,15 @@ if __name__ == "__main__":
                       ppo_batch_size=50_000, # Make this the same value as ts_per_iteration.
                       ts_per_iteration=50_000, 
                       exp_buffer_size=150_000,
-                      policy_lr=7e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
-                      critic_lr=7e-4, # 7e-4 for a brand new bot, 
+                      policy_lr=3e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
+                      critic_lr=3e-4, # 7e-4 for a brand new bot, 
                                       # 3e-4 when your bot starts chasing the ball and hitting it, 
                                       # 2e-4 when it starts trying to score
                                       # 1e-4 for advanced outplay mechs.
                       ppo_minibatch_size=50_000,
                       ppo_ent_coef=0.001, # golden value is near 0.01.
                       ppo_epochs=1,
-                      render=True, # set to True if you want to see your bot play, don't keep it on though as it slows your learning.
+                      render=False, # set to True if you want to see your bot play, don't keep it on though as it slows your learning.
                       standardize_returns=True,
                       standardize_obs=False,
                       save_every_ts=100_000,

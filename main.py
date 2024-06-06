@@ -53,7 +53,7 @@ def build_rocketsim_env(): # build our environment
     from rlgym_sim.utils.state_setters.default_state import DefaultState
     from necto_act import NectoAction # I use Necto Action Parser because it's got 90 actions to pick from. Smaller action space means your bot can start to focus on movement and stuff faster.
                                       # Even though your bot doesn't know what focus is.
-    from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce, SpeedKickoffReward, AerialDistanceReward, PlayerOnWallReward
+    from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce, SpeedKickoffReward, AerialDistanceReward, PlayerOnWallReward, LavaFloorReward
     from custom_state_setters import WeightedSampleSetter, WallPracticeState
     spawn_opponents = True # Whether you want opponents or not, set to False if you're practicing hyperspecific scenarios. The opponent is your own bot, so it plays against itself. Used to be called self_play in the old days.
     team_size = 1 # How many bots per team.
@@ -66,14 +66,15 @@ def build_rocketsim_env(): # build our environment
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
     reward_fn = CombinedReward.from_zipped(
-                        (SpeedTowardBallReward(), 0.3), 
-                          (VelocityBallToGoalReward(), 0.8),
+                        (SpeedTowardBallReward(), 0.6), 
+                          (VelocityBallToGoalReward(), 1.2),
                           (EventReward(
-                              team_goal=8, 
+                              team_goal=16, 
                               concede=-4, 
                               demo=5), 10.0),
-                          (TouchBallRewardScaledByHitForce(), 0.7),
-                          (SpeedKickoffReward(), 2),
+                          (TouchBallRewardScaledByHitForce(), 1.2),
+                          # (SpeedKickoffReward(), 2),
+                          (LavaFloorReward(), 0.01)
                           (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
                           (PlayerOnWallReward(), 0.08),
     )

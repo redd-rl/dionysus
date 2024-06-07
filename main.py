@@ -124,8 +124,8 @@ if __name__ == "__main__":
                       ppo_batch_size=50_000, # Make this the same value as ts_per_iteration.
                       ts_per_iteration=50_000, 
                       exp_buffer_size=150_000,
-                      policy_lr=2e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
-                      critic_lr=2e-4, # 7e-4 for a brand new bot, 
+                      policy_lr=3e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
+                      critic_lr=3e-4, # 7e-4 for a brand new bot, 
                                       # 3e-4 when your bot starts chasing the ball and hitting it, 
                                       # 2e-4 when it starts trying to score
                                       # 1e-4 for advanced outplay mechs.

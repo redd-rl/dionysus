@@ -70,8 +70,9 @@ def build_rocketsim_env(): # build our environment
                           (VelocityBallToGoalReward(), 1.4),
                           (EventReward(
                               team_goal=100, 
-                              concede=-4, 
-                              demo=5), 10.0),
+                              concede=-100, 
+                              demo=5,
+                              touch=5), 10.0),
                           (TouchBallRewardScaledByHitForce(), 1.8),
                           # (SpeedKickoffReward(), 2),
                           (LavaFloorReward(), 0.1),

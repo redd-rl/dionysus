@@ -67,14 +67,14 @@ def build_rocketsim_env(): # build our environment
 
     reward_fn = CombinedReward.from_zipped(
                         (SpeedTowardBallReward(), 0.6), 
-                          (VelocityBallToGoalReward(), 1.2),
+                          (VelocityBallToGoalReward(), 1.4),
                           (EventReward(
-                              team_goal=16, 
+                              team_goal=100, 
                               concede=-4, 
                               demo=5), 10.0),
-                          (TouchBallRewardScaledByHitForce(), 1.2),
+                          (TouchBallRewardScaledByHitForce(), 1.8),
                           # (SpeedKickoffReward(), 2),
-                          (LavaFloorReward(), 0.01)
+                          (LavaFloorReward(), 0.1),
                           (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
                           (PlayerOnWallReward(), 0.08),
     )

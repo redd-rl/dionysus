@@ -82,8 +82,10 @@ class TouchBallRewardScaledByHitForce(RewardFunction):
         self.cur_ball_vel = state.ball.linear_velocity
 
     def get_reward(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> float:
-        reward = np.linalg.norm(self.cur_ball_vel - self.last_ball_vel) / self.max_hit_speed
-        return reward
+        if player.ball_touched:
+            reward = np.linalg.norm(self.cur_ball_vel - self.last_ball_vel) / self.max_hit_speed
+            return reward
+        return 0
     
 RAMP_HEIGHT = 256
 

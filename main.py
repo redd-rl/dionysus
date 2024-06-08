@@ -66,7 +66,7 @@ def build_rocketsim_env(): # build our environment
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
     reward_fn = CombinedReward.from_zipped(
-                        (SpeedTowardBallReward(), 0.8), 
+                        (SpeedTowardBallReward(), 1.4), 
                           (VelocityBallToGoalReward(), 2),
                           (EventReward(
                               team_goal=5, 
@@ -74,7 +74,7 @@ def build_rocketsim_env(): # build our environment
                               demo=5), 10.0),
                           (TouchBallRewardScaledByHitForce(), 1.2),
                           # (SpeedKickoffReward(), 2),
-                          (LavaFloorReward(), 0.9),
+                          (LavaFloorReward(), 0.4),
                           (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
     )
 

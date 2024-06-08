@@ -45,7 +45,7 @@ def build_rocketsim_env(): # build our environment
     import rlgym_sim
     from rlgym_sim.utils.reward_functions import CombinedReward
     from rlgym_sim.utils.reward_functions.common_rewards import VelocityBallToGoalReward, \
-        EventReward, TouchBallReward #add rewards here if you'd like to import more from the default selection.
+        EventReward, TouchBallReward, FaceBallReward #add rewards here if you'd like to import more from the default selection.
     from rlgym_sim.utils.obs_builders import DefaultObs
     from rlgym_sim.utils.terminal_conditions.common_conditions import NoTouchTimeoutCondition, GoalScoredCondition
     from rlgym_sim.utils import common_values
@@ -55,41 +55,42 @@ def build_rocketsim_env(): # build our environment
                                       # Even though your bot doesn't know what focus is.
     from custom_rewards import SpeedTowardBallReward, TouchBallRewardScaledByHitForce, SpeedKickoffReward, AerialDistanceReward, PlayerOnWallReward, LavaFloorReward
     from custom_state_setters import WeightedSampleSetter, WallPracticeState, TeamSizeSetter
+    from custom_obs import AdvancedObsPadder
     spawn_opponents = True # Whether you want opponents or not, set to False if you're practicing hyperspecific scenarios. The opponent is your own bot, so it plays against itself. Used to be called self_play in the old days.
     team_size = 1 # How many bots per team.
     game_tick_rate = 120
     tick_skip = 8 # How long we hold an action before taking a new action, in ticks.
-    timeout_seconds = 15
+    timeout_seconds = 10
     timeout_ticks = int(round(timeout_seconds * game_tick_rate / tick_skip))
 
     action_parser = NectoAction()
     terminal_conditions = [NoTouchTimeoutCondition(timeout_ticks), GoalScoredCondition()] # What conditions terminate the current episode.
 
     reward_fn = CombinedReward.from_zipped(
-                        (SpeedTowardBallReward(), 0.8), 
-                          (VelocityBallToGoalReward(), 2),
+                          (SpeedTowardBallReward(), 0.6), 
+                          (VelocityBallToGoalReward(), 1.6),
                           (EventReward(
                               team_goal=5, 
                               concede=-5, 
-                              demo=5), 10.0),
-                          (TouchBallRewardScaledByHitForce(), 1.2),
-                          # (SpeedKickoffReward(), 2),
-                          (LavaFloorReward(), 0.9),
-                          (AerialDistanceReward(height_scale=5,distance_scale=5), 0.9),
+                              demo=1,
+                              touch=1), 10.0),
+                          (TouchBallReward(), 1.8),
+                          (FaceBallReward(), 0.5)
     )
 
-    obs_builder = DefaultObs(
-        pos_coef=np.asarray([1 / common_values.SIDE_WALL_X, 1 / common_values.BACK_NET_Y, 1 / common_values.CEILING_Z]),
-        ang_coef=1 / np.pi,
-        lin_vel_coef=1 / common_values.CAR_MAX_SPEED,
-        ang_vel_coef=1 / common_values.CAR_MAX_ANG_VEL)
+    #obs_builder = DefaultObs(
+    #    pos_coef=np.asarray([1 / common_values.SIDE_WALL_X, 1 / common_values.BACK_NET_Y, 1 / common_values.CEILING_Z]),
+    #    ang_coef=1 / np.pi,
+    #    lin_vel_coef=1 / common_values.CAR_MAX_SPEED,
+    #    ang_vel_coef=1 / common_values.CAR_MAX_ANG_VEL)
     
+    obs_builder = AdvancedObsPadder(team_size=3, expanding=True)
+
     state_setter = WeightedSampleSetter.from_zipped(
         (RandomState(True, True, False), 0.5),
-        (DefaultState(), 0.5),
+        (TeamSizeSetter(), 0.5),
         (WallPracticeState(), 0.2),
-    ) 
-    # Pre-set according to the guide, ordered in random ball velocity, random car velocity and whether the cars will be on the ground.
+    )
 
     env = rlgym_sim.make(tick_skip=tick_skip,
                          team_size=team_size,
@@ -122,18 +123,17 @@ if __name__ == "__main__":
                       ppo_batch_size=50_000, # Make this the same value as ts_per_iteration.
                       ts_per_iteration=50_000, 
                       exp_buffer_size=150_000,
-                      policy_lr=2e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
-                      critic_lr=2e-4, # 7e-4 for a brand new bot, 
+                      policy_lr=7e-4, # change these according to the guide, KEEP THEM THE SAME UNLESS YOU KNOW WHAT YOU'RE DOING.
+                      critic_lr=7e-4, # 7e-4 for a brand new bot, 
                                       # 3e-4 when your bot starts chasing the ball and hitting it, 
                                       # 2e-4 when it starts trying to score
                                       # 1e-4 for advanced outplay mechs.
-                      # policy_layer_sizes=(2048, 1024, 1024, 512), future plans
-                      # critic_layer_sizes=(2048, 1024, 1024, 512), future plans
+                      policy_layer_sizes=(2048, 1024, 1024, 512),
+                      critic_layer_sizes=(2048, 1024, 1024, 512),
                       ppo_minibatch_size=50_000,
                       ppo_ent_coef=0.001, # golden value is near 0.01.
                       ppo_epochs=1,
-                      render=True, # set to True if you want to see your bot play, don't keep it on though as it slows your learning.
-                      render_delay=8/120,
+                      render=False, # set to True if you want to see your bot play, don't keep it on though as it slows your learning.
                       standardize_returns=True,
                       standardize_obs=False,
                       save_every_ts=100_000,
